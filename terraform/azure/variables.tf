@@ -13,7 +13,7 @@ variable "cluster_name" {
 variable "node_vm_size" {
   description = "VM size for the default node pool (B-series = cheapest burstable)"
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_B2s_v2"
 }
 
 variable "github_repo" {
