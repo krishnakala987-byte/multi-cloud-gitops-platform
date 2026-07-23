@@ -16,7 +16,7 @@ resource "azuread_application_federated_identity_credential" "github_main" {
   display_name   = "github-main-branch"
   audiences      = ["api://AzureADTokenExchange"]
   issuer         = "https://token.actions.githubusercontent.com"
-  subject        = "repo:${var.github_repo}:ref:refs/heads/main"
+  subject        = "repo:krishnakala987-byte@249091793/multi-cloud-gitops-platform@1310051356:ref:refs/heads/main"
 }
 
 resource "azuread_application_federated_identity_credential" "github_pr" {
@@ -24,7 +24,7 @@ resource "azuread_application_federated_identity_credential" "github_pr" {
   display_name   = "github-pull-requests"
   audiences      = ["api://AzureADTokenExchange"]
   issuer         = "https://token.actions.githubusercontent.com"
-  subject        = "repo:${var.github_repo}:pull_request"
+  subject        = "repo:krishnakala987-byte@249091793/multi-cloud-gitops-platform@1310051356:pull_request"
 }
 
 # Reader on the resource group is enough for CI validate/plan.
