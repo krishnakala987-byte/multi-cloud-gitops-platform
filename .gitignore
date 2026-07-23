@@ -1,0 +1,18 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.auto.tfvars.example
+crash.log
+
+# Kubeconfigs & secrets - never commit
+kubeconfig*
+*.pem
+*.key
+.env
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store

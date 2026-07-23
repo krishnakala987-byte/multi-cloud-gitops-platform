@@ -1,0 +1,65 @@
+# Installs kube-prometheus-stack on every fleet cluster with per-cloud
+# external labels, remote-writing to ONE Grafana Cloud instance =
+# single-pane-of-glass observability across AWS + Azure.
+#
+# Before applying, create the remote-write secret on EACH cluster:
+#   kubectl --context <ctx> -n monitoring create secret generic grafana-cloud \
+#     --from-literal=username=<GC_PROM_USERNAME> --from-literal=password=<GC_API_TOKEN>
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            fleet: atlas
+  template:
+    metadata:
+      name: "monitoring-{{.name}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://prometheus-community.github.io/helm-charts
+        chart: kube-prometheus-stack
+        targetRevision: "65.*"
+        helm:
+          valuesObject:
+            fullnameOverride: kps
+            grafana:
+              enabled: false            # Grafana Cloud is the single pane
+            alertmanager:
+              enabled: false            # alerts handled centrally
+            prometheus:
+              prometheusSpec:
+                retention: 6h           # spokes only buffer; Grafana Cloud stores
+                resources:
+                  requests: { cpu: 100m, memory: 512Mi }
+                  limits: { cpu: 500m, memory: 1Gi }
+                externalLabels:
+                  cloud: "{{index .metadata.labels \"cloud\"}}"
+                  cluster: "{{.name}}"
+                serviceMonitorSelectorNilUsesHelmValues: false
+                remoteWrite:
+                  - url: "REPLACE_WITH_GRAFANA_CLOUD_PUSH_URL"
+                    basicAuth:
+                      username:
+                        name: grafana-cloud
+                        key: username
+                      password:
+                        name: grafana-cloud
+                        key: password
+      destination:
+        server: "{{.server}}"
+        namespace: monitoring
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true   # kube-prometheus-stack CRDs are huge

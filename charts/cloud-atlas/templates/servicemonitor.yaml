@@ -1,0 +1,17 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cloud-atlas.name" . }}
+  labels:
+    {{- include "cloud-atlas.labels" . | nindent 4 }}
+    release: kube-prometheus-stack   # match Prometheus serviceMonitorSelector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "cloud-atlas.name" . }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+{{- end }}

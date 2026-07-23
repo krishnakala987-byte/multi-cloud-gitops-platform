@@ -1,0 +1,5 @@
+# Copy to terraform.auto.tfvars after clusters are up and LBs exist:
+zone_id          = "Z0123456789ABC"
+app_fqdn         = "app.yourdomain.xyz"
+aws_nlb_dns_name = "k8s-default-cloudatl-xxxx.elb.ap-south-1.amazonaws.com"
+azure_lb_ip      = "20.x.x.x"

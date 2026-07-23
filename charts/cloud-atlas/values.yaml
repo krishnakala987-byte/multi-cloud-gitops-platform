@@ -1,0 +1,35 @@
+# Default values. The ArgoCD ApplicationSet overrides cloud/cluster/region
+# per cluster from the cluster-secret labels, so ONE chart serves all clouds.
+replicaCount: 2
+
+image:
+  repository: ghcr.io/krishnakala987-byte/cloud-atlas
+  tag: "latest"        # CI pins this to the commit SHA on every merge to main
+  pullPolicy: IfNotPresent
+
+# Identity stamped into the app (shown in JSON responses + metrics labels)
+cloud: unknown
+cluster: unknown
+region: unknown
+
+service:
+  type: LoadBalancer   # each cloud provisions its native L4 LB (NLB / Azure LB / GCLB)
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+serviceMonitor:
+  enabled: false       # set true after kube-prometheus-stack is installed

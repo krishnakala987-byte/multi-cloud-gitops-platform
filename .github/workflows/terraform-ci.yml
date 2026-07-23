@@ -1,0 +1,49 @@
+# Terraform hygiene across BOTH clouds with KEYLESS auth (OIDC).
+# Proves identity federation works: no AWS keys, no Azure client secret,
+# nothing stored anywhere in GitHub.
+name: terraform-ci
+
+on:
+  pull_request:
+    paths: ["terraform/**"]
+  push:
+    branches: [main]
+    paths: ["terraform/**"]
+
+permissions:
+  id-token: write   # OIDC token for both clouds
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cloud: [aws, azure, dns]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: AWS keyless auth
+        if: matrix.cloud == 'aws' || matrix.cloud == 'dns'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GHA_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Azure keyless auth
+        if: matrix.cloud == 'azure'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+
+      - name: fmt / init / validate
+        working-directory: terraform/${{ matrix.cloud }}
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate

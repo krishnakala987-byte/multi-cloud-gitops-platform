@@ -1,0 +1,46 @@
+# ONE ApplicationSet deploys cloud-atlas to EVERY registered cluster.
+# The cluster generator watches ArgoCD cluster secrets; labels set during
+# `argocd cluster add --label cloud=... --label region=...` flow into Helm
+# values, so each cluster self-identifies. Register a 4th cluster tomorrow
+# and it gets the app automatically - that is fleet management.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cloud-atlas
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            fleet: atlas
+  template:
+    metadata:
+      name: "cloud-atlas-{{.name}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/krishnakala987-byte/multi-cloud-gitops-platform.git
+        targetRevision: main
+        path: charts/cloud-atlas
+        helm:
+          valuesObject:
+            cloud: "{{index .metadata.labels \"cloud\"}}"
+            region: "{{index .metadata.labels \"region\"}}"
+            cluster: "{{.name}}"
+      destination:
+        server: "{{.server}}"
+        namespace: cloud-atlas
+      syncPolicy:
+        automated:
+          prune: true      # Git is the only source of truth
+          selfHeal: true   # drift (kubectl edit) is reverted automatically
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 3
+          backoff:
+            duration: 20s
+            factor: 2

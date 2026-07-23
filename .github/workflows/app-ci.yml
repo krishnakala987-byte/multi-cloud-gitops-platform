@@ -1,0 +1,74 @@
+# App pipeline: test -> build -> Trivy scan -> push to GHCR -> GitOps write-back.
+# The pipeline never touches a cluster. It updates the Helm values in Git and
+# ArgoCD reconciles both clouds - that separation is the GitOps pattern.
+name: app-ci
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", "charts/**", ".github/workflows/app-ci.yml"]
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/cloud-atlas
+
+permissions:
+  contents: write   # GitOps write-back commit
+  packages: write   # push to GHCR
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Vet and test
+        working-directory: app
+        run: |
+          go vet ./...
+          go test ./... -v
+
+  build-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t "$IMAGE:${{ github.sha }}" app/
+
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.IMAGE }}:${{ github.sha }}"
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        run: |
+          docker push "$IMAGE:${{ github.sha }}"
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+          docker push "$IMAGE:latest"
+
+  gitops-bump:
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin chart image tag to this commit
+        run: |
+          sed -i "s/^  tag: .*/  tag: \"${{ github.sha }}\"/" charts/cloud-atlas/values.yaml
+          git config user.name  "gitops-bot"
+          git config user.email "gitops-bot@users.noreply.github.com"
+          git add charts/cloud-atlas/values.yaml
+          git commit -m "ci: deploy cloud-atlas ${{ github.sha }} [skip ci]" || exit 0
+          git push
