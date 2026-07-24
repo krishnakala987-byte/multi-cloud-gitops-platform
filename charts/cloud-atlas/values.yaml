@@ -4,7 +4,7 @@ replicaCount: 2
 
 image:
   repository: ghcr.io/krishnakala987-byte/cloud-atlas
-  tag: "latest"        # CI pins this to the commit SHA on every merge to main
+  tag: "2badecc6c13d548e4ab7ed927cc3de5ae6e95dd5"
   pullPolicy: IfNotPresent
 
 # Identity stamped into the app (shown in JSON responses + metrics labels)
