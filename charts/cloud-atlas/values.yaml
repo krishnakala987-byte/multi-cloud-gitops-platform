@@ -13,7 +13,7 @@ cluster: unknown
 region: unknown
 
 service:
-  type: LoadBalancer   # each cloud provisions its native L4 LB (NLB / Azure LB / GCLB)
+  type: LoadBalancer # each cloud provisions its native L4 LB (NLB / Azure LB / GCLB)
   port: 80
   targetPort: 8080
 
@@ -32,4 +32,4 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 
 serviceMonitor:
-  enabled: false       # set true after kube-prometheus-stack is installed
+  enabled: true # set true after kube-prometheus-stack is installed
