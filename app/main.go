@@ -4,6 +4,7 @@
 // Prometheus text exposition format (stdlib only - zero dependencies).
 package main
 
+
 import (
 	"encoding/json"
 	"fmt"
