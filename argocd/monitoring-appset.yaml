@@ -31,21 +31,21 @@ spec:
           valuesObject:
             fullnameOverride: kps
             grafana:
-              enabled: false            # Grafana Cloud is the single pane
+              enabled: false # Grafana Cloud is the single pane
             alertmanager:
-              enabled: false            # alerts handled centrally
+              enabled: false # alerts handled centrally
             prometheus:
               prometheusSpec:
-                retention: 6h           # spokes only buffer; Grafana Cloud stores
+                retention: 6h # spokes only buffer; Grafana Cloud stores
                 resources:
                   requests: { cpu: 100m, memory: 512Mi }
                   limits: { cpu: 500m, memory: 1Gi }
                 externalLabels:
-                  cloud: "{{index .metadata.labels \"cloud\"}}"
+                  cloud: '{{index .metadata.labels "cloud"}}'
                   cluster: "{{.name}}"
                 serviceMonitorSelectorNilUsesHelmValues: false
                 remoteWrite:
-                  - url: "REPLACE_WITH_GRAFANA_CLOUD_PUSH_URL"
+                  - url: https://prometheus-prod-43-prod-ap-south-1.grafana.net/api/prom/push
                     basicAuth:
                       username:
                         name: grafana-cloud
@@ -62,4 +62,4 @@ spec:
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
-          - ServerSideApply=true   # kube-prometheus-stack CRDs are huge
+          - ServerSideApply=true # kube-prometheus-stack CRDs are huge
