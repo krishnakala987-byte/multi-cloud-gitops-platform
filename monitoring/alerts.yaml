@@ -1,0 +1,77 @@
+# PrometheusRule for cloud-atlas. Alert rules for kube-prometheus-stack.
+#
+# NOTE: alertmanager.enabled=false in the monitoring-appset, so these fire and
+# show as "pending" or "firing" in the Prometheus UI (Alerts tab) but do not
+# route anywhere (no Slack, email, etc). That is fine for a v1.0 demo. Wiring
+# Alertmanager notifications is a clean v1.1 roadmap item.
+#
+# IMPORTANT: kube-prometheus-stack's Prometheus CR only picks up PrometheusRule
+# objects that match its ruleSelector. By default that requires a
+# `release: <helm-release-name>` label. The label below assumes the Helm
+# release name is "monitoring". If the rules do not show up under
+# Prometheus UI, Status, Rules after applying, check the actual release name:
+#   kubectl --context aws get prometheus -n monitoring -o yaml | grep -A5 ruleSelector
+# and update the `release:` label below to match.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cloud-atlas-alerts
+  namespace: cloud-atlas
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: cloud-atlas.rules
+      rules:
+        - alert: CloudAtlasAppUnhealthy
+          expr: cloud_atlas_up == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "cloud-atlas reports unhealthy on {{ $labels.cloud }}"
+            description: >
+              The cloud_atlas_up metric has been 0 for over 2 minutes on
+              cloud={{ $labels.cloud }}, cluster={{ $labels.cluster }}.
+              The app itself is reporting an unhealthy state (for example via
+              the /chaos/unhealthy toggle, or a real failure).
+
+        - alert: CloudAtlasScrapeTargetDown
+          expr: up{namespace="cloud-atlas"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Prometheus can't scrape cloud-atlas on {{ $labels.cloud }}"
+            description: >
+              Prometheus has failed to scrape the cloud-atlas ServiceMonitor
+              target for over 2 minutes. This means the pod may be down,
+              crashlooping, or unreachable, which is distinct from an
+              app-reported unhealthy state.
+
+        - alert: CloudAtlasHighCPU
+          expr: |
+            sum by (cloud, pod) (rate(container_cpu_usage_seconds_total{namespace="cloud-atlas"}[5m])) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on cloud-atlas pod {{ $labels.pod }} ({{ $labels.cloud }})"
+            description: >
+              Pod {{ $labels.pod }} on cloud={{ $labels.cloud }} has used over
+              0.8 CPU cores (averaged over 5m) for more than 5 minutes.
+              HPA should be scaling out. Verify with
+              `kubectl get hpa -n cloud-atlas` on that cluster's context.
+
+        - alert: CloudAtlasPodRestartingFrequently
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="cloud-atlas"}[15m]) > 3
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cloud-atlas pod restarting frequently on {{ $labels.cloud }}"
+            description: >
+              Pod {{ $labels.pod }} on cloud={{ $labels.cloud }} has restarted
+              more than 3 times in the last 15 minutes, likely crashlooping.
