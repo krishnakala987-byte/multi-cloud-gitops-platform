@@ -1,5 +1,5 @@
-variable "zone_id" {
-  description = "Route 53 hosted zone ID for your domain"
+variable "aws_vpc_id" {
+  description = "VPC to associate the private hosted zone with"
   type        = string
 }
 

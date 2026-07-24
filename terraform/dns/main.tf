@@ -11,6 +11,17 @@ locals {
   active = { for k, v in local.endpoints : k => v if v.enabled }
 }
 
+resource "aws_route53_zone" "private" {
+  name = "atlas.internal"
+
+  vpc {
+    vpc_id     = var.aws_vpc_id
+    vpc_region = "ap-south-1"
+  }
+
+  comment = "Private hosted zone for Cloud Atlas"
+}
+
 resource "aws_route53_health_check" "cloud" {
   for_each = local.active
 
@@ -33,7 +44,7 @@ resource "aws_route53_health_check" "cloud" {
 resource "aws_route53_record" "per_cloud" {
   for_each = local.active
 
-  zone_id = var.zone_id
+  zone_id = aws_route53_zone.private.zone_id
   name    = "${each.key}.${var.app_fqdn}"
   type    = each.value.is_ip ? "A" : "CNAME"
   ttl     = 30
@@ -43,7 +54,7 @@ resource "aws_route53_record" "per_cloud" {
 resource "aws_route53_record" "weighted" {
   for_each = local.active
 
-  zone_id        = var.zone_id
+  zone_id        = aws_route53_zone.private.zone_id
   name           = var.app_fqdn
   type           = "CNAME"
   ttl            = 30

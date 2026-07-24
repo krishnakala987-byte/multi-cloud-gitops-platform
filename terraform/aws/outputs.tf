@@ -14,3 +14,7 @@ output "gha_role_arn" {
 output "kubeconfig_command" {
   value = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name} --alias aws"
 }
+
+output "vpc_id" {
+  value = module.vpc.vpc_id
+}
