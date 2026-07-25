@@ -4,8 +4,6 @@ One Git repository drives two managed Kubernetes clusters on the two most widely
 
 Push to `main`, both clusters roll out. Kill one cloud, traffic stops routing to it within about a minute. This isn't a design on paper, it was tested by actually scaling a cluster to zero and watching DNS respond in real time.
 
-<!-- add: ArgoCD fleet screenshot, Grafana dual-cloud dashboard, DNS failover test output, demo video link -->
-
 ## Architecture
 
 ```mermaid
